@@ -1,15 +1,21 @@
 import streamlit as st
 import requests
 
-# Main function to fetch Core Web Vitals assessment for mobile
+# Function to fetch Core Web Vitals assessment for mobile
 def get_core_web_vitals_mobile(url, api_key):
     endpoint = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&key={api_key}&strategy=mobile'
     response = requests.get(endpoint)
     if response.status_code == 200:
         data = response.json()
-        # Extract the Core Web Vitals assessment from the API response
-        core_web_vitals = data.get('loadingExperience', {}).get('overall_category', 'Unknown')
-        return core_web_vitals
+        # Extract the Core Web Vitals metrics
+        lcp = data.get('loadingExperience', {}).get('metrics', {}).get('LARGEST_CONTENTFUL_PAINT_MS', -1)
+        fid = data.get('loadingExperience', {}).get('metrics', {}).get('FIRST_INPUT_DELAY_MS', -1)
+        cls = data.get('loadingExperience', {}).get('metrics', {}).get('CUMULATIVE_LAYOUT_SHIFT_SCORE', -1)
+        # Check if metrics meet the thresholds for passing Core Web Vitals
+        if lcp <= 2500 and fid <= 100 and cls <= 0.1:
+            return 'Passed'
+        else:
+            return 'Failed'
     else:
         return 'API Error'
 
