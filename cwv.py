@@ -1,35 +1,49 @@
 import streamlit as st
 import requests
-from lxml import html
+from bs4 import BeautifulSoup
+import re
 
 def get_redirected_url(url):
-    response = requests.head(url, allow_redirects=True)
-    return response.url
+    try:
+        response = requests.head(url, allow_redirects=True)
+        redirected_url = response.url
+        return redirected_url
+    except Exception as e:
+        st.error(f"Error occurred while fetching the URL: {e}")
+        return None
 
-def get_text_from_xpath(url, xpath):
-    response = requests.get(url)
-    tree = html.fromstring(response.content)
-    text = tree.xpath(xpath)
-    if text:
-        return text[0].text_content()
-    else:
+def get_span_text(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        span = soup.find('span', {'class': re.compile(r'.*?')})  # You can adjust the class regex as per your requirement
+        if span:
+            return span.text
+        else:
+            return "Span element not found"
+    except Exception as e:
+        st.error(f"Error occurred while parsing the page: {e}")
         return None
 
 def main():
-    st.title("URL Text Extractor")
+    st.title("URL Analyzer")
 
-    url_input = st.text_input("Enter URL(s) separated by space (or newline):")
+    url_input = st.text_input("Enter URL(s) separated by commas:", "")
 
-    if st.button("Extract Text"):
-        urls = url_input.split()
+    if st.button("Analyze"):
+        urls = [url.strip() for url in url_input.split(',')]
         for url in urls:
-            redirected_url = get_redirected_url(url)
-            st.write(f"Redirected URL: {redirected_url}")
-            text = get_text_from_xpath(redirected_url, '//*[@id="yDmH0d"]/c-wiz/div[2]/div/div[2]/div[3]/div/div/div[2]/span/div/div[1]/div[2]/div[1]/div/div/div[1]/div/div/span[1]')
-            if text:
-                st.write(f"Text extracted from URL: {text}")
+            concatenated_url = f"https://pagespeed.web.dev/analysis?url={url}"
+            redirected_url = get_redirected_url(concatenated_url)
+            if redirected_url:
+                st.write(f"Redirected URL: {redirected_url}")
+                span_text = get_span_text(redirected_url)
+                if span_text:
+                    st.write(f"Text of the span element: {span_text}")
+                else:
+                    st.warning("Failed to extract text from the span element.")
             else:
-                st.write("Unable to extract text from the provided URL.")
+                st.warning("Failed to fetch redirected URL.")
 
 if __name__ == "__main__":
     main()
