@@ -1,9 +1,9 @@
 import streamlit as st
 import requests
 
-# Main function to fetch Core Web Vitals assessment
-def get_core_web_vitals(url, api_key):
-    endpoint = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&key={api_key}'
+# Main function to fetch Core Web Vitals assessment for mobile
+def get_core_web_vitals_mobile(url, api_key):
+    endpoint = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&key={api_key}&strategy=mobile'
     response = requests.get(endpoint)
     if response.status_code == 200:
         data = response.json()
@@ -15,7 +15,7 @@ def get_core_web_vitals(url, api_key):
 
 # Streamlit app
 def main():
-    st.title("Bulk Core Web Vitals Checker")
+    st.title("Bulk Core Web Vitals Checker (Mobile)")
 
     # Input field for API key
     api_key = st.text_input("Enter your Google PageSpeed Insights API key:")
@@ -27,16 +27,16 @@ def main():
     # Convert the text area input to a list of URLs
     urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
 
-    if st.button("Check Core Web Vitals"):
+    if st.button("Check Core Web Vitals (Mobile)"):
         if not api_key:
             st.error("Please enter your Google PageSpeed Insights API key.")
         elif not urls:
             st.warning("Please enter at least one URL.")
         else:
-            st.subheader("Core Web Vitals Assessment:")
-            # Loop through each URL and get its Core Web Vitals assessment
+            st.subheader("Core Web Vitals Assessment (Mobile):")
+            # Loop through each URL and get its Core Web Vitals assessment for mobile
             for url in urls:
-                core_web_vitals = get_core_web_vitals(url, api_key)
+                core_web_vitals = get_core_web_vitals_mobile(url, api_key)
                 st.write(f'{url}: {core_web_vitals}')
 
 if __name__ == "__main__":
