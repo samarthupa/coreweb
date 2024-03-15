@@ -44,7 +44,7 @@ def check_core_web_vitals(url):
 st.title("Core Web Vitals Bulk Checker")
 
 # Input field for API key
-api_key = st.text_input("Enter your CrUX API Key", type="password")
+api_key = st.text_input("AIzaSyCLrD3sJw3PiSkVjFtvsesI8tbS5uAu7xc", type="password")
 
 # Text area for URLs
 urls_text = st.text_area("Enter a list of URLs (one per line)")
