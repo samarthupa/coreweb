@@ -8,8 +8,6 @@ def get_redirected_url(url):
     try:
         response = requests.get(url, allow_redirects=True)
         final_url = response.url
-        # Wait for a short period to allow redirections to complete
-        time.sleep(2)  # You can adjust the waiting time as needed
         return final_url
     except Exception as e:
         st.error(f"Error occurred while fetching the URL: {e}")
@@ -19,7 +17,7 @@ def get_span_text(url):
     try:
         response = requests.get(url)
         tree = html.fromstring(response.content)
-        span_text = tree.xpath('//*[@id="yDmH0d"]/c-wiz/div[2]/div/div[2]/div[3]/div/div/div[2]/span/div/div[1]/div[2]/div[1]/div/div/div[1]/div/div/span[1]/text()')
+        span_text = tree.xpath('//*[@id="yDmH0d"]/c-wiz/div[2]/div/div[2]/div[3]/div/div/div[2]/span/div/div[1]/div[2]/div[1]/div/div/div[1]/div/div/span[1]')
         if span_text:
             return span_text[0]
         else:
@@ -37,6 +35,8 @@ def main():
         urls = [url.strip() for url in url_input.split(',')]
         for url in urls:
             concatenated_url = f"https://pagespeed.web.dev/analysis?url={url}"
+            # Wait for 5 seconds before fetching the redirected URL
+            time.sleep(5)
             final_url = get_redirected_url(concatenated_url)
             if final_url:
                 st.write(f"Final URL after redirection: {final_url}")
