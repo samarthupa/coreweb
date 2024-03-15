@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import re
+from lxml import html
 
 def get_redirected_url(url):
     try:
@@ -15,10 +15,10 @@ def get_redirected_url(url):
 def get_span_text(url):
     try:
         response = requests.get(url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        span = soup.find('span', {'class': re.compile(r'.*?')})  # You can adjust the class regex as per your requirement
-        if span:
-            return span.text
+        tree = html.fromstring(response.content)
+        span_text = tree.xpath('//*[@id="yDmH0d"]/c-wiz/div[2]/div/div[2]/div[3]/div/div/div[2]/span/div/div[1]/div[2]/div[1]/div/div/div[1]/div/div/span[1]/text()')
+        if span_text:
+            return span_text[0]
         else:
             return "Span element not found"
     except Exception as e:
