@@ -5,9 +5,9 @@ from lxml import html
 
 def get_redirected_url(url):
     try:
-        response = requests.head(url, allow_redirects=True)
-        redirected_url = response.url
-        return redirected_url
+        response = requests.get(url, allow_redirects=True)
+        final_url = response.url
+        return final_url
     except Exception as e:
         st.error(f"Error occurred while fetching the URL: {e}")
         return None
@@ -34,16 +34,16 @@ def main():
         urls = [url.strip() for url in url_input.split(',')]
         for url in urls:
             concatenated_url = f"https://pagespeed.web.dev/analysis?url={url}"
-            redirected_url = get_redirected_url(concatenated_url)
-            if redirected_url:
-                st.write(f"Redirected URL: {redirected_url}")
-                span_text = get_span_text(redirected_url)
+            final_url = get_redirected_url(concatenated_url)
+            if final_url:
+                st.write(f"Final URL after redirection: {final_url}")
+                span_text = get_span_text(final_url)
                 if span_text:
                     st.write(f"Text of the span element: {span_text}")
                 else:
                     st.warning("Failed to extract text from the span element.")
             else:
-                st.warning("Failed to fetch redirected URL.")
+                st.warning("Failed to fetch final URL after redirection.")
 
 if __name__ == "__main__":
     main()
