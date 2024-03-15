@@ -2,11 +2,14 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from lxml import html
+import time
 
 def get_redirected_url(url):
     try:
         response = requests.get(url, allow_redirects=True)
         final_url = response.url
+        # Wait for a short period to allow redirections to complete
+        time.sleep(2)  # You can adjust the waiting time as needed
         return final_url
     except Exception as e:
         st.error(f"Error occurred while fetching the URL: {e}")
