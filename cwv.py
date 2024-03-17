@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 def fetch_crux_data(url):
-    api_url = f'https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=YOUR_API_KEY'
+    api_url = f'https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug'
     body = {
         "url": url,
         "metrics": [
