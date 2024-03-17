@@ -39,4 +39,3 @@ if st.button('Fetch CWV Data'):
             st.write(cwv_data)
     else:
         st.warning('Please enter a URL.')
-
