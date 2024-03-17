@@ -1,17 +1,16 @@
 import streamlit as st
 import requests
 
+
 # Function to fetch CrUX History API data
 def fetch_crux_history_data(url, api_key):
-    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}"
+    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={api_key}"
     payload = {
         "origin": url,  # Assuming the input URL is the origin
         "metrics": [
             "largest_contentful_paint",
-            "cumulative_layout_shift",
-            "first_input_delay",
             "first_contentful_paint",
-            "experimental_time_to_first_byte"
+            "first_input_delay",
         ]
     }
 
@@ -23,10 +22,13 @@ def fetch_crux_history_data(url, api_key):
         st.error(f"Error fetching CrUX History API data: {e}")
         return None
 
-# Convert density values to seconds and milliseconds
-def convert_density_to_time(density):
-    # Assuming the time range for each density is represented in milliseconds
-    return round(density * 1000, 2)
+
+# Function to convert milliseconds to seconds with milliseconds
+def ms_to_seconds_ms(milliseconds):
+    seconds = int(milliseconds / 1000)
+    remaining_ms = int(milliseconds % 1000)
+    return f"{seconds} s {remaining_ms} ms"
+
 
 # Main function for Streamlit app
 def main():
@@ -46,27 +48,22 @@ def main():
             crux_history_data = fetch_crux_history_data(url, api_key)
 
             if crux_history_data:
-                st.write("**Most Recent Period Metrics:**")
+                st.write("**Core Web Vitals:**")
                 metrics = crux_history_data.get("metrics", {})
 
                 for metric_name, metric_data in metrics.items():
-                    st.write(f"**{metric_name.capitalize()}**:")
-                    if "histogramTimeseries" in metric_data:
-                        bin_data = metric_data["histogramTimeseries"][-1]  # Get data for most recent period
-                        densities = bin_data.get("densities", [])
-                        converted_times = [convert_density_to_time(density) for density in densities]
-                        st.write(f"  - Times: {converted_times}")
-                    elif "percentilesTimeseries" in metric_data:
-                        percentiles = metric_data["percentilesTimeseries"].get("p75s", [])
-                        st.write(f"  - Percentiles (p75): {percentiles}")
-                    elif "fractionTimeseries" in metric_data:
-                        fractions = metric_data["fractionTimeseries"]
-                        for label, fraction_data in fractions.items():
-                            fractions_values = fraction_data.get("fractions", [])
-                            st.write(f"  - Fractions for {label}: {fractions_values}")
-                    st.write("")  # Add empty line for readability
+                    if "percentiles" in metric_data:
+                        percentiles = metric_data["percentiles"]
+                        p75 = percentiles.get("p75", 0)
+                        processed_value = ms_to_seconds_ms(p75)
+                        st.write(f"- {metric_name.capitalize()}: {processed_value}")
+                    else:
+                        st.write(f"- {metric_name.capitalize()}: Data not available")
+                st.write("")  # Add empty line for readability
+
             else:
                 st.warning("No CrUX History API data found for the provided URL or an error occurred.")
+
 
 if __name__ == "__main__":
     main()
