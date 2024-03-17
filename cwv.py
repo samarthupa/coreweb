@@ -29,6 +29,30 @@ def calculate_core_web_vitals_scores(metrics_data):
     
     return lcp_score, cls_score, fid_score
 
+# Function to categorize scores
+def categorize_score(score, metric):
+    if metric == "largest_contentful_paint":
+        if score <= 2500:
+            return "Good"
+        elif 2500 < score <= 4000:
+            return "Needs Improvement"
+        else:
+            return "Poor"
+    elif metric == "cumulative_layout_shift":
+        if score <= 0.1:
+            return "Good"
+        elif 0.1 < score <= 0.25:
+            return "Needs Improvement"
+        else:
+            return "Poor"
+    elif metric == "experimental_time_to_first_byte":
+        if score <= 100:
+            return "Good"
+        elif 100 < score <= 300:
+            return "Needs Improvement"
+        else:
+            return "Poor"
+
 # Streamlit app
 st.title("Core Web Vitals Metrics")
 
@@ -42,8 +66,17 @@ if st.button("Fetch Metrics"):
         st.write("Fetching Core Web Vitals metrics...")
         metrics_data = fetch_core_web_vitals_metrics(url, api_key)
         lcp_score, cls_score, fid_score = calculate_core_web_vitals_scores(metrics_data)
-        st.write("Largest Contentful Paint (LCP) Score:", lcp_score)
-        st.write("Cumulative Layout Shift (CLS) Score:", cls_score)
-        st.write("Experimental Time to First Byte (FID) Score:", fid_score)
+        
+        st.subheader("Largest Contentful Paint (LCP)")
+        st.write("Score:", lcp_score)
+        st.write("Category:", categorize_score(lcp_score, "largest_contentful_paint"))
+        
+        st.subheader("Cumulative Layout Shift (CLS)")
+        st.write("Score:", cls_score)
+        st.write("Category:", categorize_score(cls_score, "cumulative_layout_shift"))
+        
+        st.subheader("Experimental Time to First Byte (FID)")
+        st.write("Score:", fid_score)
+        st.write("Category:", categorize_score(fid_score, "experimental_time_to_first_byte"))
     else:
         st.warning("Please enter the URL and API Key.")
