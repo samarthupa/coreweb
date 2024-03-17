@@ -23,6 +23,14 @@ def fetch_crux_history_data(url, api_key):
         st.error(f"Error fetching CrUX History API data: {e}")
         return None
 
+# Function to convert densities to metrics values
+def convert_densities_to_metrics(densities):
+    # Assuming the density represents the proportion of user experiences within that range
+    # and the range values correspond to milliseconds
+    total_samples = sum(densities)
+    metric_value = sum(start * density for start, density in enumerate(densities)) / total_samples
+    return metric_value
+
 # Main function for Streamlit app
 def main():
     st.title("CrUX History API Data Fetcher")
@@ -49,7 +57,8 @@ def main():
                     if "histogramTimeseries" in metric_data:
                         bin_data = metric_data["histogramTimeseries"][-1]  # Get data for most recent period
                         densities = bin_data.get("densities", [])
-                        st.write(f"  - Densities: {densities}")
+                        metric_value = convert_densities_to_metrics(densities)
+                        st.write(f"  - Metric Value: {metric_value} milliseconds")
                     elif "percentilesTimeseries" in metric_data:
                         percentiles = metric_data["percentilesTimeseries"].get("p75s", [])
                         st.write(f"  - Percentiles (p75): {percentiles}")
