@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # CrUX API endpoint (replace with your API key)
-CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=YOUR_API_KEY"
+CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"
 
 def fetch_crux_data(url, form_factor="DESKTOP"):
     """Fetches CrUX data for a given URL and form factor.
