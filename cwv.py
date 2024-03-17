@@ -3,16 +3,9 @@ import requests
 
 # Function to fetch CrUX History API data
 def fetch_crux_history_data(url, api_key):
-    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}"
+    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={api_key}"
     payload = {
-        "origin": url,  # Assuming the input URL is the origin
-        "metrics": [
-            "largest_contentful_paint",
-            "cumulative_layout_shift",
-            "first_input_delay",
-            "first_contentful_paint",
-            "experimental_time_to_first_byte"
-        ]
+        "url": url
     }
 
     try:
@@ -23,20 +16,19 @@ def fetch_crux_history_data(url, api_key):
         st.error(f"Error fetching CrUX History API data: {e}")
         return None
 
-# Function to convert densities to metrics values
-def convert_densities_to_metrics(densities):
-    # Assuming the density represents the proportion of user experiences within that range
-    # and the range values correspond to milliseconds
-    total_samples = sum(densities)
-    metric_value = sum(start * density for start, density in enumerate(densities)) / total_samples
-    return metric_value
+# Calculate metric value based on density
+def calculate_metric_value(densities):
+    total = 0
+    for i, density in enumerate(densities):
+        total += (i + 1) * density
+    return total
 
 # Main function for Streamlit app
 def main():
     st.title("CrUX History API Data Fetcher")
 
     # Input URL and API key
-    url = st.text_input("Enter a URL or origin:")
+    url = st.text_input("Enter a URL:")
     api_key = st.text_input("Enter your CrUX API key:")
 
     # Fetch CrUX History API data on button click
@@ -44,32 +36,53 @@ def main():
         if not api_key:
             st.error("Please enter your CrUX API key.")
         elif not url:
-            st.error("Please enter a URL or origin.")
+            st.error("Please enter a URL.")
         else:
             crux_history_data = fetch_crux_history_data(url, api_key)
 
             if crux_history_data:
-                st.write("**Most Recent Period Metrics:**")
                 metrics = crux_history_data.get("metrics", {})
+                core_web_vitals = {
+                    "largest_contentful_paint": "Largest Contentful Paint (LCP)",
+                    "first_input_delay": "Interaction to Next Paint (INP)",
+                    "cumulative_layout_shift": "Cumulative Layout Shift (CLS)"
+                }
 
-                for metric_name, metric_data in metrics.items():
-                    st.write(f"**{metric_name.capitalize()}**:")
-                    if "histogramTimeseries" in metric_data:
-                        bin_data = metric_data["histogramTimeseries"][-1]  # Get data for most recent period
-                        densities = bin_data.get("densities", [])
-                        metric_value = convert_densities_to_metrics(densities)
-                        st.write(f"  - Metric Value: {metric_value} milliseconds")
-                    elif "percentilesTimeseries" in metric_data:
-                        percentiles = metric_data["percentilesTimeseries"].get("p75s", [])
-                        st.write(f"  - Percentiles (p75): {percentiles}")
-                    elif "fractionTimeseries" in metric_data:
-                        fractions = metric_data["fractionTimeseries"]
-                        for label, fraction_data in fractions.items():
-                            fractions_values = fraction_data.get("fractions", [])
-                            st.write(f"  - Fractions for {label}: {fractions_values}")
-                    st.write("")  # Add empty line for readability
-            else:
-                st.warning("No CrUX History API data found for the provided URL or an error occurred.")
+                st.header("Core Web Vitals Assessment:")
+                all_passed = True
+                for metric_name, metric_label in core_web_vitals.items():
+                    metric_data = metrics.get(metric_name, {})
+                    if "histogram" in metric_data:
+                        densities = metric_data["histogram"][-1]["density"]
+                        metric_value = calculate_metric_value(densities)
+                        st.write(f"{metric_label}: {metric_value:.1f} ms")
+                        if metric_name == "cumulative_layout_shift" and metric_value > 0.1:
+                            all_passed = False
+                        elif metric_value > 2500:  # LCP threshold is 2.5 seconds
+                            all_passed = False
+                    else:
+                        st.write(f"No data available for {metric_label}")
+
+                if all_passed:
+                    st.write("Core Web Vitals Assessment: Passed")
+                else:
+                    st.write("Core Web Vitals Assessment: Failed")
+
+                st.header("Other Notable Metrics:")
+                other_metrics = {
+                    "first_contentful_paint": "First Contentful Paint (FCP)",
+                    "first_input_delay": "First Input Delay (FID)",
+                    "experimental_time_to_first_byte": "Time to First Byte (TTFB)"
+                }
+
+                for metric_name, metric_label in other_metrics.items():
+                    metric_data = metrics.get(metric_name, {})
+                    if "histogram" in metric_data:
+                        densities = metric_data["histogram"][-1]["density"]
+                        metric_value = calculate_metric_value(densities)
+                        st.write(f"{metric_label}: {metric_value:.1f} ms")
+                    else:
+                        st.write(f"No data available for {metric_label}")
 
 if __name__ == "__main__":
     main()
