@@ -47,8 +47,8 @@ def main():
         if crux_data:
             st.write("**CrUX Data:**")
             lcp = crux_data.get("metrics", {}).get("largest_contentful_paint", {}).get("percentile", None)
-            cls = crux_data.get("metrics", {}).get("cumulative_layout_shift", {}).get("percentile", None)
-            inp = crux_data.get("metrics", {}).get("first_input_delay", {}).get("percentile", None)
+            cls = crux_data.get("metrics", {}).get("layout_instability.cumulative_layout_shift", {}).get("percentile", None)
+            inp = crux_data.get("metrics", {}).get("first_input.delay", {}).get("percentile", None)
 
             # Handle potential None values before formatting
             lcp_str = f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)" if lcp else "- Largest Contentful Paint (LCP): Not available"
