@@ -1,65 +1,45 @@
 import streamlit as st
 import requests
 
-# CrUX API endpoint (replace with your API key)
-CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"
-
-def fetch_crux_data(url, form_factor="DESKTOP"):
-    """Fetches CrUX data for a given URL and form factor.
-
-    Args:
-        url (str): The URL to fetch data for.
-        form_factor (str, optional): The device type ("DESKTOP" or "MOBILE"). Defaults to "DESKTOP".
-
-    Returns:
-        dict: A dictionary containing the CrUX data or None if an error occurs.
-    """
-
+# Function to fetch CrUX data
+def fetch_crux_data(url, api_key):
+    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug}"
     payload = {
-        "url": url,
-        "formFactor": form_factor,
+        "url": url
     }
 
     try:
-        response = requests.post(CRUX_API_URL, json=payload)
+        response = requests.post(endpoint, json=payload)
         response.raise_for_status()  # Raise an exception for non-200 status codes
-        data = response.json()
-        if "record" in data:
-            return data["record"]
-        else:
-            st.warning("No CrUX data found for the provided URL.")
-            return None
+        return response.json()["record"]
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching CrUX data: {e}")
         return None
 
+# Main function for Streamlit app
 def main():
-    """Main function for the Streamlit app."""
-
     st.title("CrUX Data Fetcher")
 
+    # Input URL and API key
     url = st.text_input("Enter a URL:")
-    form_factor = st.selectbox("Form Factor", ["DESKTOP", "MOBILE"])
+    api_key = st.text_input("Enter your CrUX API key:")
 
+    # Fetch CrUX data on button click
     if st.button("Fetch CrUX Data"):
-        crux_data = fetch_crux_data(url, form_factor)
-
-        if crux_data:
-            st.write("**CrUX Data:**")
-            lcp = crux_data.get("metrics", {}).get("largest_contentful_paint", {}).get("percentile", None)
-            cls = crux_data.get("metrics", {}).get("layout_instability.cumulative_layout_shift", {}).get("percentile", None)
-            inp = crux_data.get("metrics", {}).get("first_input.delay", {}).get("percentile", None)
-
-            # Handle potential None values before formatting
-            lcp_str = f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)" if lcp else "- Largest Contentful Paint (LCP): Not available"
-            cls_str = f"- Cumulative Layout Shift (CLS): {cls:.2f} (if available)" if cls else "- Cumulative Layout Shift (CLS): Not available"
-            inp_str = f"- First Input Delay (INP): {inp:.2f} milliseconds (if available)" if inp else "- First Input Delay (INP): Not available"
-
-            st.write(lcp_str)
-            st.write(cls_str)
-            st.write(inp_str)
+        if not api_key:
+            st.error("Please enter your CrUX API key.")
         else:
-            st.warning("No CrUX data found for the provided URL or an error occurred.")
+            crux_data = fetch_crux_data(url, api_key)
+
+            if crux_data:
+                st.write("**CrUX Data:**")
+                metrics = crux_data.get("metrics", {})
+                for metric_name, metric_data in metrics.items():
+                    st.write(f"- {metric_name}:")
+                    for percentile, value in metric_data.get("percentiles", {}).items():
+                        st.write(f"  - Percentile {percentile}: {value}")
+            else:
+                st.warning("No CrUX data found for the provided URL or an error occurred.")
 
 if __name__ == "__main__":
     main()
