@@ -23,35 +23,16 @@ def calculate_core_web_vitals_scores(metrics_data):
     cls_scores = metrics.get("cumulative_layout_shift", {}).get("histogramTimeseries", [])[-1].get("densities", [])
     fid_scores = metrics.get("experimental_time_to_first_byte", {}).get("histogramTimeseries", [])[-1].get("densities", [])
     
-    lcp_score = sum(lcp_scores) if lcp_scores else 0
-    cls_score = sum(cls_scores) if cls_scores else 0
-    fid_score = sum(fid_scores) if fid_scores else 0
+    # Convert LCP score to seconds
+    lcp_score_sec = sum(lcp_scores) / 1000 if lcp_scores else 0
     
-    return lcp_score, cls_score, fid_score
-
-# Function to categorize scores
-def categorize_score(score, metric):
-    if metric == "largest_contentful_paint":
-        if score <= 2500:
-            return "Good"
-        elif 2500 < score <= 4000:
-            return "Needs Improvement"
-        else:
-            return "Poor"
-    elif metric == "cumulative_layout_shift":
-        if score <= 0.1:
-            return "Good"
-        elif 0.1 < score <= 0.25:
-            return "Needs Improvement"
-        else:
-            return "Poor"
-    elif metric == "experimental_time_to_first_byte":
-        if score <= 100:
-            return "Good"
-        elif 100 < score <= 300:
-            return "Needs Improvement"
-        else:
-            return "Poor"
+    # FID scores are already in milliseconds
+    fid_score_ms = sum(fid_scores) if fid_scores else 0
+    
+    # Convert CLS score to PSI format (multiply by 100 to get a percentage)
+    cls_score_psi = sum(cls_scores) * 100 if cls_scores else 0
+    
+    return lcp_score_sec, cls_score_psi, fid_score_ms
 
 # Streamlit app
 st.title("Core Web Vitals Metrics")
@@ -65,18 +46,9 @@ if st.button("Fetch Metrics"):
     if url and api_key:
         st.write("Fetching Core Web Vitals metrics...")
         metrics_data = fetch_core_web_vitals_metrics(url, api_key)
-        lcp_score, cls_score, fid_score = calculate_core_web_vitals_scores(metrics_data)
-        
-        st.subheader("Largest Contentful Paint (LCP)")
-        st.write("Score:", lcp_score)
-        st.write("Category:", categorize_score(lcp_score, "largest_contentful_paint"))
-        
-        st.subheader("Cumulative Layout Shift (CLS)")
-        st.write("Score:", cls_score)
-        st.write("Category:", categorize_score(cls_score, "cumulative_layout_shift"))
-        
-        st.subheader("Experimental Time to First Byte (FID)")
-        st.write("Score:", fid_score)
-        st.write("Category:", categorize_score(fid_score, "experimental_time_to_first_byte"))
+        lcp_score_sec, cls_score_psi, fid_score_ms = calculate_core_web_vitals_scores(metrics_data)
+        st.write("Largest Contentful Paint (LCP) Score:", lcp_score_sec, "seconds")
+        st.write("Cumulative Layout Shift (CLS) Score:", cls_score_psi, "%")
+        st.write("First Input Delay (FID) Score:", fid_score_ms, "milliseconds")
     else:
         st.warning("Please enter the URL and API Key.")
