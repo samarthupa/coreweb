@@ -5,11 +5,13 @@ import requests
 def fetch_crux_history_data(url, api_key):
     endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}"
     payload = {
-        "origin": url,  # Assuming the input URL is the origin
+        "origin": url,
         "metrics": [
             "largest_contentful_paint",
             "cumulative_layout_shift",
-            "first_input_delay"
+            "first_input_delay",
+            "first_contentful_paint",
+            "experimental_time_to_first_byte"
         ]
     }
     try:
@@ -23,11 +25,11 @@ def fetch_crux_history_data(url, api_key):
 # Main function for Streamlit app
 def main():
     st.title("CrUX History API Data Fetcher")
-    
+
     # Input URL and API key
     url = st.text_input("Enter a URL or origin:")
     api_key = st.text_input("Enter your CrUX API key:")
-    
+
     # Fetch CrUX History API data on button click
     if st.button("Fetch CrUX History API Data"):
         if not api_key:
@@ -37,42 +39,40 @@ def main():
         else:
             crux_history_data = fetch_crux_history_data(url, api_key)
             if crux_history_data:
+                st.write("**Core Web Vitals Assessment:**")
+                cls_values = []
+                inp_values = []
+                lcp_values = []
                 metrics = crux_history_data.get("metrics", {})
-                cls_data = metrics.get("cumulative_layout_shift", [])
-                inp_data = metrics.get("first_input_delay", [])
-                lcp_data = metrics.get("largest_contentful_paint", [])
-                
-                # Filter data for the last 28 days
-                cls_last_28_days = cls_data[-28:]
-                inp_last_28_days = inp_data[-28:]
-                lcp_last_28_days = lcp_data[-28:]
+                collection_periods = crux_history_data.get("collectionPeriods", [])
+                for metric_name, metric_data in metrics.items():
+                    if metric_name == "cumulative_layout_shift":
+                        for bin_data in metric_data["histogramTimeseries"]:
+                            densities = bin_data.get("densities", [])
+                            cls_values.extend(densities[-28:])  # Taking last 28 days
+                    elif metric_name == "first_input_delay":
+                        for bin_data in metric_data["histogramTimeseries"]:
+                            densities = bin_data.get("densities", [])
+                            inp_values.extend(densities[-28:])  # Taking last 28 days
+                    elif metric_name == "largest_contentful_paint":
+                        for bin_data in metric_data["histogramTimeseries"]:
+                            densities = bin_data.get("densities", [])
+                            lcp_values.extend(densities[-28:])  # Taking last 28 days
                 
                 # Calculate average values
-                avg_cls = sum(cls_last_28_days) / len(cls_last_28_days)
-                avg_inp = sum(inp_last_28_days) / len(inp_last_28_days)
-                avg_lcp = sum(lcp_last_28_days) / len(lcp_last_28_days)
+                avg_cls = sum(cls_values) / len(cls_values) if cls_values else 0
+                avg_inp = sum(inp_values) / len(inp_values) if inp_values else 0
+                avg_lcp = sum(lcp_values) / len(lcp_values) if lcp_values else 0
                 
-                # Display average values
-                st.write("Core Web Vitals Assessment:")
-                if avg_cls <= 0.1 and avg_inp <= 100 and avg_lcp <= 2500:
-                    st.write("Passed")
-                else:
-                    st.write("Failed")
-
-                st.write("Largest Contentful Paint (LCP)")
-                st.write(f"{avg_lcp} ms")
-
-                st.write("Interaction to Next Paint (INP)")
-                st.write(f"{avg_inp} ms")
-
-                st.write("Cumulative Layout Shift (CLS)")
-                st.write(avg_cls)
-
-                # Other notable metrics
-                st.write("OTHER NOTABLE METRICS")
-                st.write("First Contentful Paint (FCP)")
-                st.write("First Input Delay (FID)")
-                st.write("Time to First Byte (TTFB)")
+                st.write("Failed" if avg_cls > 0.1 else "Passed")
+                st.write("**Core Web Vitals Metrics:**")
+                st.write(f"Largest Contentful Paint (LCP): {avg_lcp:.1f} s")
+                st.write(f"Interaction to Next Paint (INP): {avg_inp:.0f} ms")
+                st.write(f"Cumulative Layout Shift (CLS): {avg_cls:.2f}")
+                
+                st.write("**Other Notable Metrics:**")
+                # You can add other metrics here and calculate their averages as well
+                
             else:
                 st.warning("No CrUX History API data found for the provided URL or an error occurred.")
 
