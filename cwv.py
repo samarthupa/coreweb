@@ -34,14 +34,10 @@ def main():
                 metrics = crux_data.get("metrics", {})
                 for metric_name, metric_data in metrics.items():
                     st.write(f"- {metric_name}:")
-                    percentiles = metric_data.get("percentiles", {})
-                    if percentiles:
-                        for percentile, value in percentiles.items():
-                            st.write(f" - Percentile {percentile}: {value}")
-                        average_value = sum(percentiles.values()) / len(percentiles)
-                        st.write(f" - Average: {average_value}")
-                    else:
-                        st.write(" - No percentile data available.")
+                    for percentile, value in metric_data.get("percentiles", {}).items():
+                        st.write(f" - Percentile {percentile}: {value}")
+                    average_value = sum(metric_data.get("percentiles", {}).values()) / len(metric_data.get("percentiles", {}))
+                    st.write(f" - Average: {average_value}")
             else:
                 st.warning("No CrUX data found for the provided URL or an error occurred.")
 
