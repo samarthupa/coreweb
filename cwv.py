@@ -32,12 +32,21 @@ def main():
             crux_data = fetch_crux_data(url, api_key)
 
             if crux_data:
-                st.write("**CrUX Data:**")
-                metrics = crux_data.get("metrics", {})
-                for metric_name, metric_data in metrics.items():
-                    st.write(f"- {metric_name}:")
-                    for percentile, value in metric_data.get("percentiles", {}).items():
-                        st.write(f"  - Percentile {percentile}: {value}")
+                st.write("**Core Web Vitals Assessment:**")
+                lcp = crux_data.get("metrics", {}).get("largest_contentful_paint", {}).get("percentiles", {}).get("p75")
+                cls = crux_data.get("metrics", {}).get("cumulative_layout_shift", {}).get("percentiles", {}).get("p75")
+                fid = crux_data.get("metrics", {}).get("first_input_delay", {}).get("percentiles", {}).get("p75")
+                fcp = crux_data.get("metrics", {}).get("first_contentful_paint", {}).get("percentiles", {}).get("p75")
+                ttfb = crux_data.get("metrics", {}).get("experimental_time_to_first_byte", {}).get("percentiles", {}).get("p75")
+                inp = crux_data.get("metrics", {}).get("interaction_to_next_paint", {}).get("percentiles", {}).get("p75")
+                
+                st.write("Expand view")
+                st.write(f"Largest Contentful Paint (LCP): {lcp} ms")
+                st.write(f"Cumulative Layout Shift (CLS): {cls}")
+                st.write(f"First Input Delay (FID): {fid} ms")
+                st.write(f"First Contentful Paint (FCP): {fcp} ms")
+                st.write(f"Time to First Byte (TTFB): {ttfb} ms")
+                st.write(f"Interaction to Next Paint (INP): {inp} ms")
             else:
                 st.warning("No CrUX data found for the provided URL or an error occurred.")
 
