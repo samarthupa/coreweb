@@ -45,9 +45,14 @@ def main():
             cls = crux_data.get("cumulativeLayoutShift", {}).get("median", None)
             inp = crux_data.get("firstInputDelay", {}).get("median", None)
 
-            st.write(f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)")
-            st.write(f"- Cumulative Layout Shift (CLS): {cls:.2f} (if available)")
-            st.write(f"- First Input Delay (INP): {inp:.2f} milliseconds (if available)")
+            # Handle potential None values before formatting
+            lcp_str = f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)" if lcp else "- Largest Contentful Paint (LCP): Not available"
+            cls_str = f"- Cumulative Layout Shift (CLS): {cls:.2f} (if available)" if cls else "- Cumulative Layout Shift (CLS): Not available"
+            inp_str = f"- First Input Delay (INP): {inp:.2f} milliseconds (if available)" if inp else "- First Input Delay (INP): Not available"
+
+            st.write(lcp_str)
+            st.write(cls_str)
+            st.write(inp_str)
 
             # Avoid unnecessary modifications (as per feedback)
             # st.success("Data fetched successfully!")
