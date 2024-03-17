@@ -1,17 +1,23 @@
 import streamlit as st
 import requests
+from datetime import datetime, timedelta
 
 
 # Function to fetch CrUX History API data
 def fetch_crux_history_data(url, api_key):
-    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={api_key}"
+    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}"
+    today = datetime.utcnow()
+    past_28_days = today - timedelta(days=28)
+
     payload = {
-        "origin": url,  # Assuming the input URL is the origin
+        "origin": url,
         "metrics": [
             "largest_contentful_paint",
-            "first_contentful_paint",
+            "cumulative_layout_shift",
             "first_input_delay",
-        ]
+        ],
+        "startDate": past_28_days.strftime("%Y-%m-%d"),
+        "endDate": today.strftime("%Y-%m-%d"),
     }
 
     try:
@@ -23,23 +29,49 @@ def fetch_crux_history_data(url, api_key):
         return None
 
 
-# Function to convert milliseconds to seconds with milliseconds
-def ms_to_seconds_ms(milliseconds):
-    seconds = int(milliseconds / 1000)
-    remaining_ms = int(milliseconds % 1000)
-    return f"{seconds} s {remaining_ms} ms"
+# Function to calculate score from density data
+def calculate_score(densities):
+    if not densities:
+        return None
+
+    # Define thresholds (can be adjusted based on specific requirements)
+    lcp_good_threshold = 2500
+    cls_good_threshold = 0.1
+    fid_good_threshold = 100
+
+    total_density = sum(densities)
+    score = 0
+
+    # Calculate weighted score based on density distribution relative to thresholds
+    for i, density in enumerate(densities):
+        start = i * 500  # Assuming histogram bin size is 500ms
+        end = start + 500
+
+        # LCP - good = higher density in lower end of bin
+        if metric_name == "largest_contentful_paint":
+            weight = 1 - (end / lcp_good_threshold)
+        # CLS - good = lower density throughout
+        elif metric_name == "cumulative_layout_shift":
+            weight = 1 - density
+        # FID - good = higher density in lower end of bin
+        else:
+            weight = 1 - (end / fid_good_threshold)
+
+        score += density * weight
+
+    return score * 100 / total_density
 
 
 # Main function for Streamlit app
 def main():
-    st.title("CrUX History API Data Fetcher")
+    st.title("CrUX History API - Core Web Vitals")
 
     # Input URL and API key
     url = st.text_input("Enter a URL or origin:")
     api_key = st.text_input("Enter your CrUX API key:")
 
     # Fetch CrUX History API data on button click
-    if st.button("Fetch CrUX History API Data"):
+    if st.button("Fetch Core Web Vitals"):
         if not api_key:
             st.error("Please enter your CrUX API key.")
         elif not url:
@@ -48,15 +80,18 @@ def main():
             crux_history_data = fetch_crux_history_data(url, api_key)
 
             if crux_history_data:
-                st.write("**Core Web Vitals:**")
                 metrics = crux_history_data.get("metrics", {})
 
                 for metric_name, metric_data in metrics.items():
-                    if "percentiles" in metric_data:
-                        percentiles = metric_data["percentiles"]
-                        p75 = percentiles.get("p75", 0)
-                        processed_value = ms_to_seconds_ms(p75)
-                        st.write(f"- {metric_name.capitalize()}: {processed_value}")
+                    if "histogramTimeseries" in metric_data:
+                        # Get data for most recent period (assuming last entry)
+                        latest_densities = metric_data["histogramTimeseries"][-1]["densities"]
+                        score = calculate_score(latest_densities)
+                        st.write(f"- {metric_name.capitalize()}:")
+                        if score:
+                            st.write(f"  - Score: {score:.1f}")
+                        else:
+                            st.write("  - Data not available for the past 28 days.")
                     else:
                         st.write(f"- {metric_name.capitalize()}: Data not available")
                 st.write("")  # Add empty line for readability
