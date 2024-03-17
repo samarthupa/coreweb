@@ -3,7 +3,7 @@ import requests
 
 # Function to fetch CrUX data
 def fetch_crux_data(url, api_key):
-    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug}"
+    endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key={api_key}"
     payload = {
         "url": url
     }
