@@ -1,50 +1,48 @@
-import streamlit as st
 import requests
+import streamlit as st
 
-def fetch_crux_data(url):
-    api_url = f'https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug'
-    body = {
+# Function to query CrUX History API and fetch Core Web Vitals metrics
+def fetch_core_web_vitals_metrics(url, api_key):
+    endpoint = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord"
+    params = {"key": api_key}
+    data = {
         "url": url,
         "metrics": [
-            {"name": "first_contentful_paint"},
-            {"name": "cumulative_layout_shift"},
-            {"name": "largest_contentful_paint"},
-            {"name": "first_input_delay"}
-        ],
-        "formFactor": "PHONE",
-        "device": "all",
-        "endDate": "2024-03-17", # Change to today's date
-        "startDate": "2024-02-17", # Change to 28 days before today's date
+            "largest_contentful_paint",
+            "cumulative_layout_shift",
+            "experimental_first_input_delay"
+        ]
     }
-    response = requests.post(api_url, json=body)
+    response = requests.post(endpoint, params=params, json=data)
     return response.json()
 
-def calculate_score(metrics_data):
-    lcp_density = metrics_data['first_contentful_paint']['histogram'][0]['density']
-    cls_density = metrics_data['cumulative_layout_shift']['histogram'][0]['density']
-    inp_density = metrics_data['first_input_delay']['histogram'][0]['density']
+# Function to calculate Core Web Vitals scores
+def calculate_core_web_vitals_scores(metrics_data):
+    lcp_scores = metrics_data["largest_contentful_paint"]["histogramTimeseries"][-1]["densities"]
+    cls_scores = metrics_data["cumulative_layout_shift"]["histogramTimeseries"][-1]["densities"]
+    fid_scores = metrics_data["experimental_first_input_delay"]["histogramTimeseries"][-1]["densities"]
     
-    lcp_score = lcp_density * 1000
-    cls_score = cls_density * 1000
-    inp_score = inp_density * 1000
+    lcp_score = sum(lcp_scores)
+    cls_score = sum(cls_scores)
+    fid_score = sum(fid_scores)
     
-    return lcp_score, cls_score, inp_score
+    return lcp_score, cls_score, fid_score
 
-def main():
-    st.title("Core Web Vitals Metrics Calculator")
-    url = st.text_input("Enter URL:")
-    if st.button("Calculate"):
-        if not url:
-            st.error("Please enter a valid URL.")
-            return
-        try:
-            crux_data = fetch_crux_data(url)
-            lcp_score, cls_score, inp_score = calculate_score(crux_data)
-            st.success(f"Largest Contentful Paint (LCP) Score: {lcp_score}")
-            st.success(f"Cumulative Layout Shift (CLS) Score: {cls_score}")
-            st.success(f"Input Delay (FID) Score: {inp_score}")
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+# Streamlit app
+st.title("Core Web Vitals Metrics")
 
-if __name__ == "__main__":
-    main()
+# Input fields
+url = st.text_input("Enter URL:", "https://example.com")
+api_key = st.text_input("Enter API Key:")
+
+# Fetch and display Core Web Vitals metrics
+if st.button("Fetch Metrics"):
+    if url and api_key:
+        st.write("Fetching Core Web Vitals metrics...")
+        metrics_data = fetch_core_web_vitals_metrics(url, api_key)
+        lcp_score, cls_score, fid_score = calculate_core_web_vitals_scores(metrics_data)
+        st.write("Largest Contentful Paint (LCP) Score:", lcp_score)
+        st.write("Cumulative Layout Shift (CLS) Score:", cls_score)
+        st.write("First Input Delay (FID) Score:", fid_score)
+    else:
+        st.warning("Please enter the URL and API Key.")
