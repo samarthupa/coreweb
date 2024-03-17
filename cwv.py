@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # CrUX API endpoint (replace with your API key)
-CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"
+CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=YOUR_API_KEY"
 
 def fetch_crux_data(url, form_factor="DESKTOP"):
     """Fetches CrUX data for a given URL and form factor.
@@ -23,7 +23,12 @@ def fetch_crux_data(url, form_factor="DESKTOP"):
     try:
         response = requests.post(CRUX_API_URL, json=payload)
         response.raise_for_status()  # Raise an exception for non-200 status codes
-        return response.json()["record"]
+        data = response.json()
+        if "record" in data:
+            return data["record"]
+        else:
+            st.warning("No CrUX data found for the provided URL.")
+            return None
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching CrUX data: {e}")
         return None
@@ -41,9 +46,9 @@ def main():
 
         if crux_data:
             st.write("**CrUX Data:**")
-            lcp = crux_data.get("largestContentfulPaint", {}).get("median", None)
-            cls = crux_data.get("cumulativeLayoutShift", {}).get("median", None)
-            inp = crux_data.get("firstInputDelay", {}).get("median", None)
+            lcp = crux_data.get("metrics", {}).get("largest_contentful_paint", {}).get("percentile", None)
+            cls = crux_data.get("metrics", {}).get("cumulative_layout_shift", {}).get("percentile", None)
+            inp = crux_data.get("metrics", {}).get("first_input_delay", {}).get("percentile", None)
 
             # Handle potential None values before formatting
             lcp_str = f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)" if lcp else "- Largest Contentful Paint (LCP): Not available"
@@ -53,9 +58,6 @@ def main():
             st.write(lcp_str)
             st.write(cls_str)
             st.write(inp_str)
-
-            # Avoid unnecessary modifications (as per feedback)
-            # st.success("Data fetched successfully!")
         else:
             st.warning("No CrUX data found for the provided URL or an error occurred.")
 
