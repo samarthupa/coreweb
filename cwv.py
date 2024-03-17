@@ -1,51 +1,58 @@
 import streamlit as st
 import requests
 
-# CrUX API endpoint (replace with your desired data source if needed)
-CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/browsingData"
+# CrUX API endpoint (replace with your API key)
+CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"
 
-# Function to fetch CrUX data for a URL and date range
-def fetch_crux_data(url, start_date, end_date):
-    params = {
+def fetch_crux_data(url, form_factor="DESKTOP"):
+    """Fetches CrUX data for a given URL and form factor.
+
+    Args:
+        url (str): The URL to fetch data for.
+        form_factor (str, optional): The device type ("DESKTOP" or "MOBILE"). Defaults to "DESKTOP".
+
+    Returns:
+        dict: A dictionary containing the CrUX data or None if an error occurs.
+    """
+
+    payload = {
         "url": url,
-        "keys": "largestContentfulPaint,cumulativeLayoutShift,firstInputDelay",
-        "filter": f"date >= '{start_date}' AND date <= '{end_date}'",
+        "formFactor": form_factor,
     }
-    headers = {"Authorization": "Bearer AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"}  # Replace with your CrUX API key
 
     try:
-        response = requests.get(CRUX_API_URL, headers=headers, params=params)
+        response = requests.post(CRUX_API_URL, json=payload)
         response.raise_for_status()  # Raise an exception for non-200 status codes
-        return response.json()
+        return response.json()["record"]
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching CrUX data: {e}")
         return None
 
-# Streamlit app layout
-st.title("CrUX Data Fetcher")
+def main():
+    """Main function for the Streamlit app."""
 
-url = st.text_input("Enter URL:")
-if not url:
-    st.warning("Please enter a valid URL.")
+    st.title("CrUX Data Fetcher")
 
-if url:
-    # Calculate date range for the last 28 days
-    today = datetime.datetime.now()
-    start_date = (today - datetime.timedelta(days=28)).strftime("%Y-%m-%d")
-    end_date = today.strftime("%Y-%m-%d")
+    url = st.text_input("Enter a URL:")
+    form_factor = st.selectbox("Form Factor", ["DESKTOP", "MOBILE"])
 
-    # Fetch CrUX data
-    crux_data = fetch_crux_data(url, start_date, end_date)
+    if st.button("Fetch CrUX Data"):
+        crux_data = fetch_crux_data(url, form_factor)
 
-    # Display results (handle potential missing data gracefully)
-    if crux_data:
-        if "aggregations" in crux_data:
-            for metric, data in crux_data["aggregations"].items():
-                if data:
-                    st.write(f"{metric.upper()}: {data['percentiles']['75']}")  # Display 75th percentile
-                else:
-                    st.warning(f"No data available for {metric.upper()}")
+        if crux_data:
+            st.write("**CrUX Data:**")
+            lcp = crux_data.get("largestContentfulPaint", {}).get("median", None)
+            cls = crux_data.get("cumulativeLayoutShift", {}).get("median", None)
+            inp = crux_data.get("firstInputDelay", {}).get("median", None)
+
+            st.write(f"- Largest Contentful Paint (LCP): {lcp:.2f} seconds (if available)")
+            st.write(f"- Cumulative Layout Shift (CLS): {cls:.2f} (if available)")
+            st.write(f"- First Input Delay (INP): {inp:.2f} milliseconds (if available)")
+
+            # Avoid unnecessary modifications (as per feedback)
+            # st.success("Data fetched successfully!")
         else:
-            st.warning("No CrUX data found for the specified URL and date range.")
-    else:
-        st.warning("An error occurred while fetching CrUX data.")
+            st.warning("No CrUX data found for the provided URL or an error occurred.")
+
+if __name__ == "__main__":
+    main()
