@@ -9,12 +9,9 @@ def fetch_crux_history_data(url, api_key):
         "metrics": [
             "largest_contentful_paint",
             "cumulative_layout_shift",
-            "first_input_delay",
-            "first_contentful_paint",
-            "experimental_time_to_first_byte"
+            "first_input_delay"
         ]
     }
-
     try:
         response = requests.post(endpoint, json=payload)
         response.raise_for_status()  # Raise an exception for non-200 status codes
@@ -26,11 +23,11 @@ def fetch_crux_history_data(url, api_key):
 # Main function for Streamlit app
 def main():
     st.title("CrUX History API Data Fetcher")
-
+    
     # Input URL and API key
     url = st.text_input("Enter a URL or origin:")
     api_key = st.text_input("Enter your CrUX API key:")
-
+    
     # Fetch CrUX History API data on button click
     if st.button("Fetch CrUX History API Data"):
         if not api_key:
@@ -39,33 +36,43 @@ def main():
             st.error("Please enter a URL or origin.")
         else:
             crux_history_data = fetch_crux_history_data(url, api_key)
-
             if crux_history_data:
-                st.write("**Metrics Averaged Over 28-Day Periods:**")
                 metrics = crux_history_data.get("metrics", {})
-                collection_periods = crux_history_data.get("collectionPeriods", [])
+                cls_data = metrics.get("cumulative_layout_shift", [])
+                inp_data = metrics.get("first_input_delay", [])
+                lcp_data = metrics.get("largest_contentful_paint", [])
+                
+                # Filter data for the last 28 days
+                cls_last_28_days = cls_data[-28:]
+                inp_last_28_days = inp_data[-28:]
+                lcp_last_28_days = lcp_data[-28:]
+                
+                # Calculate average values
+                avg_cls = sum(cls_last_28_days) / len(cls_last_28_days)
+                avg_inp = sum(inp_last_28_days) / len(inp_last_28_days)
+                avg_lcp = sum(lcp_last_28_days) / len(lcp_last_28_days)
+                
+                # Display average values
+                st.write("Core Web Vitals Assessment:")
+                if avg_cls <= 0.1 and avg_inp <= 100 and avg_lcp <= 2500:
+                    st.write("Passed")
+                else:
+                    st.write("Failed")
 
-                for metric_name, metric_data in metrics.items():
-                    st.write(f"**{metric_name.capitalize()}**:")
-                    for period_index, period in enumerate(collection_periods):
-                        start_date = period.get("firstDate", {})
-                        end_date = period.get("lastDate", {})
-                        start_str = f"{start_date.get('year', '')}-{start_date.get('month', '')}-{start_date.get('day', '')}"
-                        end_str = f"{end_date.get('year', '')}-{end_date.get('month', '')}-{end_date.get('day', '')}"
-                        st.write(f"Period {period_index + 1}: From {start_str} to {end_str}")
-                        if "histogramTimeseries" in metric_data:
-                            for bin_data in metric_data["histogramTimeseries"]:
-                                densities = bin_data.get("densities", [])
-                                st.write(f"  - Densities: {densities}")
-                        elif "percentilesTimeseries" in metric_data:
-                            percentiles = metric_data["percentilesTimeseries"].get("p75s", [])
-                            st.write(f"  - Percentiles (p75): {percentiles}")
-                        elif "fractionTimeseries" in metric_data:
-                            fractions = metric_data["fractionTimeseries"]
-                            for label, fraction_data in fractions.items():
-                                fractions_values = fraction_data.get("fractions", [])
-                                st.write(f"  - Fractions for {label}: {fractions_values}")
-                        st.write("")  # Add empty line for readability
+                st.write("Largest Contentful Paint (LCP)")
+                st.write(f"{avg_lcp} ms")
+
+                st.write("Interaction to Next Paint (INP)")
+                st.write(f"{avg_inp} ms")
+
+                st.write("Cumulative Layout Shift (CLS)")
+                st.write(avg_cls)
+
+                # Other notable metrics
+                st.write("OTHER NOTABLE METRICS")
+                st.write("First Contentful Paint (FCP)")
+                st.write("First Input Delay (FID)")
+                st.write("Time to First Byte (TTFB)")
             else:
                 st.warning("No CrUX History API data found for the provided URL or an error occurred.")
 
