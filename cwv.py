@@ -1,41 +1,51 @@
 import streamlit as st
 import requests
 
-# Streamlit App Header
-st.title('Core Web Vitals Checker')
+# CrUX API endpoint (replace with your desired data source if needed)
+CRUX_API_URL = "https://chromeuxreport.googleapis.com/v1/browsingData"
 
-# Function to Fetch CWV Data from CrUX API
-def fetch_cwv_data(url):
-    # Construct the API URL
-    api_url = f'https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug'
-    # Construct the request payload
-    payload = {
+# Function to fetch CrUX data for a URL and date range
+def fetch_crux_data(url, start_date, end_date):
+    params = {
         "url": url,
-        "metrics": [
-            {"metric": "cumulative_layout_shift"},
-            {"metric": "largest_contentful_paint"},
-            {"metric": "first_input_delay"}
-        ],
-        "dateRange": {"startDate": "2023-02-01", "endDate": "2023-02-28"},
-        "formFactor": "PHONE",
-        "effectiveConnectionType": "4G"
+        "keys": "largestContentfulPaint,cumulativeLayoutShift,firstInputDelay",
+        "filter": f"date >= '{start_date}' AND date <= '{end_date}'",
     }
-    # Make a POST request to the CrUX API
-    response = requests.post(api_url, json=payload)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        st.error("Failed to fetch data. Please try again later.")
+    headers = {"Authorization": "Bearer AIzaSyANOzNJ4C4f2Ng5Ark4YzyWelNe-WBblug"}  # Replace with your CrUX API key
+
+    try:
+        response = requests.get(CRUX_API_URL, headers=headers, params=params)
+        response.raise_for_status()  # Raise an exception for non-200 status codes
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching CrUX data: {e}")
         return None
 
-# Streamlit App Interface
-url = st.text_input('Enter URL:')
-if st.button('Fetch CWV Data'):
-    if url:
-        cwv_data = fetch_cwv_data(url)
-        if cwv_data:
-            # Display CWV Data
-            st.write(cwv_data)
+# Streamlit app layout
+st.title("CrUX Data Fetcher")
+
+url = st.text_input("Enter URL:")
+if not url:
+    st.warning("Please enter a valid URL.")
+
+if url:
+    # Calculate date range for the last 28 days
+    today = datetime.datetime.now()
+    start_date = (today - datetime.timedelta(days=28)).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+
+    # Fetch CrUX data
+    crux_data = fetch_crux_data(url, start_date, end_date)
+
+    # Display results (handle potential missing data gracefully)
+    if crux_data:
+        if "aggregations" in crux_data:
+            for metric, data in crux_data["aggregations"].items():
+                if data:
+                    st.write(f"{metric.upper()}: {data['percentiles']['75']}")  # Display 75th percentile
+                else:
+                    st.warning(f"No data available for {metric.upper()}")
+        else:
+            st.warning("No CrUX data found for the specified URL and date range.")
     else:
-        st.warning('Please enter a URL.')
+        st.warning("An error occurred while fetching CrUX data.")
