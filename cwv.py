@@ -18,9 +18,9 @@ def fetch_core_web_vitals_metrics(url, api_key):
 
 # Function to calculate Core Web Vitals scores
 def calculate_core_web_vitals_scores(metrics_data):
-    lcp_scores = metrics_data["largest_contentful_paint"]["histogramTimeseries"][-1]["densities"]
-    cls_scores = metrics_data["cumulative_layout_shift"]["histogramTimeseries"][-1]["densities"]
-    fid_scores = metrics_data["experimental_first_input_delay"]["histogramTimeseries"][-1]["densities"]
+    lcp_scores = metrics_data["record"]["metrics"]["largest_contentful_paint"]["histogramTimeseries"][-1]["densities"]
+    cls_scores = metrics_data["record"]["metrics"]["cumulative_layout_shift"]["histogramTimeseries"][-1]["densities"]
+    fid_scores = metrics_data["record"]["metrics"]["experimental_first_input_delay"]["histogramTimeseries"][-1]["densities"]
     
     lcp_score = sum(lcp_scores)
     cls_score = sum(cls_scores)
