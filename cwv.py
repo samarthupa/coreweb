@@ -5,7 +5,7 @@ import requests
 def fetch_crux_history_data(url, api_key):
     endpoint = f"https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord?key={api_key}"
     payload = {
-        "origin": url,
+        "origin": url,  # Assuming the input URL is the origin
         "metrics": [
             "largest_contentful_paint",
             "cumulative_layout_shift",
@@ -14,6 +14,7 @@ def fetch_crux_history_data(url, api_key):
             "experimental_time_to_first_byte"
         ]
     }
+
     try:
         response = requests.post(endpoint, json=payload)
         response.raise_for_status()  # Raise an exception for non-200 status codes
@@ -38,41 +39,33 @@ def main():
             st.error("Please enter a URL or origin.")
         else:
             crux_history_data = fetch_crux_history_data(url, api_key)
+
             if crux_history_data:
-                st.write("**Core Web Vitals Assessment:**")
-                cls_values = []
-                inp_values = []
-                lcp_values = []
+                st.write("**Metrics Averaged Over 28-Day Periods:**")
                 metrics = crux_history_data.get("metrics", {})
                 collection_periods = crux_history_data.get("collectionPeriods", [])
+
                 for metric_name, metric_data in metrics.items():
-                    if metric_name == "cumulative_layout_shift":
-                        for bin_data in metric_data["histogramTimeseries"]:
-                            densities = bin_data.get("densities", [])
-                            cls_values.extend(densities[-28:])  # Taking last 28 days
-                    elif metric_name == "first_input_delay":
-                        for bin_data in metric_data["histogramTimeseries"]:
-                            densities = bin_data.get("densities", [])
-                            inp_values.extend(densities[-28:])  # Taking last 28 days
-                    elif metric_name == "largest_contentful_paint":
-                        for bin_data in metric_data["histogramTimeseries"]:
-                            densities = bin_data.get("densities", [])
-                            lcp_values.extend(densities[-28:])  # Taking last 28 days
-                
-                # Calculate average values
-                avg_cls = sum(cls_values) / len(cls_values) if cls_values else 0
-                avg_inp = sum(inp_values) / len(inp_values) if inp_values else 0
-                avg_lcp = sum(lcp_values) / len(lcp_values) if lcp_values else 0
-                
-                st.write("Failed" if avg_cls > 0.1 else "Passed")
-                st.write("**Core Web Vitals Metrics:**")
-                st.write(f"Largest Contentful Paint (LCP): {avg_lcp:.1f} s")
-                st.write(f"Interaction to Next Paint (INP): {avg_inp:.0f} ms")
-                st.write(f"Cumulative Layout Shift (CLS): {avg_cls:.2f}")
-                
-                st.write("**Other Notable Metrics:**")
-                # You can add other metrics here and calculate their averages as well
-                
+                    st.write(f"**{metric_name.capitalize()}**:")
+                    for period_index, period in enumerate(collection_periods):
+                        start_date = period.get("firstDate", {})
+                        end_date = period.get("lastDate", {})
+                        start_str = f"{start_date.get('year', '')}-{start_date.get('month', '')}-{start_date.get('day', '')}"
+                        end_str = f"{end_date.get('year', '')}-{end_date.get('month', '')}-{end_date.get('day', '')}"
+                        st.write(f"Period {period_index + 1}: From {start_str} to {end_str}")
+                        if "histogramTimeseries" in metric_data:
+                            for bin_data in metric_data["histogramTimeseries"]:
+                                densities = bin_data.get("densities", [])
+                                st.write(f"  - Densities: {densities}")
+                        elif "percentilesTimeseries" in metric_data:
+                            percentiles = metric_data["percentilesTimeseries"].get("p75s", [])
+                            st.write(f"  - Percentiles (p75): {percentiles}")
+                        elif "fractionTimeseries" in metric_data:
+                            fractions = metric_data["fractionTimeseries"]
+                            for label, fraction_data in fractions.items():
+                                fractions_values = fraction_data.get("fractions", [])
+                                st.write(f"  - Fractions for {label}: {fractions_values}")
+                        st.write("")  # Add empty line for readability
             else:
                 st.warning("No CrUX History API data found for the provided URL or an error occurred.")
 
